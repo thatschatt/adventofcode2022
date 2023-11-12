@@ -18,7 +18,7 @@ function gettree(lines)
     tree = dir("/", 0, 0, Dict())
     treepos = ["/"] #vector representing each possible choices
     for line in lines[2:end]
-        println("line is: $line")
+   #     println("line is: $line")
         if line[1] == '$'
             if line == "\$ cd .."
                 pop!(treepos)
@@ -35,12 +35,13 @@ function gettree(lines)
             d = gotodir(tree, treepos)
        #     println("tree is $tree")
             if line[1] == 'd'
-                println("dir") #we don't care about dir reports
+        #        println("dir") #we don't care about dir reports
             else
                 fsize =  parse(Int, split(line, " ")[1])
                 d.size += fsize
                 #and now to walk up the tree adding to all the other dirs
                 pd = tree
+                pd.totalsize += fsize   
                 for parent in (treepos[2:end])
                     pd = pd.subdirs[parent]
                     pd.totalsize += fsize    
@@ -77,9 +78,21 @@ function traverseforbiggies(tree::dir, sizethresh, biglist)
     return biglist
 end
 
-println("*****")
+#and now to search for the smallest folder we can delete
+function traverseforkillable(tree::dir, sizethresh, currentbest::dir)
+    if tree.totalsize >= sizethresh
+        if tree.totalsize < currentbest.totalsize
+            currentbest = tree
+            println("new best is $(tree.name)")
+        end
+    end
+    for subs in tree.subdirs
+        currentbest = traverseforkillable(subs[2], sizethresh, currentbest)
+    end
+    return currentbest
+end
+
 tree = gettree(lines)
-println("\n*****\n")
 println(tree)
 println("\n*****\n")
 bigs =  traverseforbiggies(tree, 100000, [])
@@ -90,3 +103,11 @@ for d in bigs
 end
 
 println("***\ntotal size is $total_s")
+
+#now to work out deleting
+availspace = 70000000 - tree.totalsize
+neededspace = 30000000 - availspace
+println("available space = $availspace")
+println("needed space = $neededspace")
+killfolder = traverseforkillable(tree, neededspace, tree)
+println("$killfolder")
